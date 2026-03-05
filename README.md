@@ -1,4 +1,11 @@
-# English–Vietnamese Video Translation System using Machine Learning
+# English – Vietnamese Video Translation System using Machine Learning
+
+![Poster](./images/Poster.png)
+
+[![Watch video](https://img.youtube.com/vi/jTzVYh_J9I4/0.jpg)](https://www.youtube.com/watch?v=jTzVYh_J9I4)
+
+[![Watch video](https://img.youtube.com/vi/dy5tgLu1FEo/1.jpg)](https://www.youtube.com/watch?v=dy5tgLu1FEo)
+[![Watch video](https://img.youtube.com/vi/WmPpc6lNOSc/1.jpg)](https://www.youtube.com/watch?v=WmPpc6lNOSc)
 
 ## 1. Overview
 
