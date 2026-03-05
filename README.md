@@ -13,19 +13,25 @@
 </p>
 
 <h2 align="center">Result</h2>
-<p align="center">
+<table align="center">
+<tr>
+<td align="center" width="50%">
 <a href="https://www.youtube.com/watch?v=dy5tgLu1FEo">
-<img src="https://img.youtube.com/vi/dy5tgLu1FEo/0.jpg" width="49%">
+<img src="https://img.youtube.com/vi/dy5tgLu1FEo/0.jpg" width="100%">
 </a>
-<a href="https://www.youtube.com/watch?v=WmPpc6lNOSc">
-<img src="https://img.youtube.com/vi/WmPpc6lNOSc/0.jpg" width="49%">
-</a>
-</p>
+<br>
+<b>Vietnamese → English Translation</b>
+</td>
 
-<p align="center">
-Vietnamese → English Translation &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-English → Vietnamese Translation
-</p>
+<td align="center" width="50%">
+<a href="https://www.youtube.com/watch?v=WmPpc6lNOSc">
+<img src="https://img.youtube.com/vi/WmPpc6lNOSc/0.jpg" width="100%">
+</a>
+<br>
+<b>English → Vietnamese Translation</b>
+</td>
+</tr>
+</table>
 
 ## 1. Overview
 
