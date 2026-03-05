@@ -5,13 +5,6 @@
   <img src="./images/Poster.png" width="700">
 </p>
 
-<h2 align="center">Demo</h2>
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=jTzVYh_J9I4">
-    <img src="https://img.youtube.com/vi/jTzVYh_J9I4/maxresdefault.jpg" width="600">
-  </a>
-</p>
-
 <h2 align="center">Result</h2>
 <table align="center">
 <tr>
@@ -32,6 +25,13 @@
 </td>
 </tr>
 </table>
+
+<h2 align="center">Demo</h2>
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=jTzVYh_J9I4">
+    <img src="https://img.youtube.com/vi/jTzVYh_J9I4/maxresdefault.jpg" width="600">
+  </a>
+</p>
 
 ## 1. Overview
 
