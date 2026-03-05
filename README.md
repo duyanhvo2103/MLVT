@@ -164,7 +164,7 @@ The system follows a 3-tier architecture:
 
 ### 7.1 Quantitative Metrics
 
-- BLEU – translation quality
+- Avg Entailment Prob / Avg Log-prob / Avg Perplexity – translation quality
 
 - PSNR / SSIM – visual quality
 
