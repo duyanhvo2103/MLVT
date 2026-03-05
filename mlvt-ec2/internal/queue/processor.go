@@ -1,0 +1,345 @@
+package queue
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"mlvt-api/api/model"
+	"mlvt-api/internal/command"
+	"mlvt-api/internal/python"
+	utils "mlvt-api/pkg"
+)
+
+// Processor handles the processing of jobs and callback interactions.
+type Processor struct{}
+
+// NewProcessor initializes a new Processor.
+func NewProcessor() *Processor {
+	return &Processor{}
+}
+
+// Process handles the processing of a job based on its type.
+func (p *Processor) Process(job *model.Job) error {
+	switch job.Type {
+	case "ttt":
+		req, ok := job.Request.(*model.TTTRequest)
+		if !ok {
+			return model.ErrInvalidRequestType
+		}
+		return p.processTTT(job, req)
+	case "tts":
+		req, ok := job.Request.(*model.TTSRequest)
+		if !ok {
+			return model.ErrInvalidRequestType
+		}
+		return p.processTTS(job, req)
+	case "stt":
+		req, ok := job.Request.(*model.STTRequest)
+		if !ok {
+			return model.ErrInvalidRequestType
+		}
+		return p.processSTT(job, req)
+	case "ls":
+		req, ok := job.Request.(*model.LSRequest)
+		if !ok {
+			return model.ErrInvalidRequestType
+		}
+		return p.processLS(job, req)
+	default:
+		return model.ErrUnknownJobType
+	}
+}
+
+// processTTT processes a Text-to-Text (TTT) job.
+func (p *Processor) processTTT(job *model.Job, req *model.TTTRequest) error {
+	// Define directories
+	inputDir := filepath.Join("data", "input", "ttt")
+	outputDir := filepath.Join("data", "output", "ttt")
+
+	// Ensure directories exist
+	if err := os.MkdirAll(inputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create input directory: %v", err)
+	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Define full paths
+	originalInputPath := filepath.Join(inputDir, req.InputFileName)
+	outputFilePath := filepath.Join(outputDir, req.OutputFileName)
+
+	// Step 1: Download the input file
+	log.Printf("Job ID %s: Downloading input file from %s to %s", job.ID, req.InputLink, originalInputPath)
+	if err := utils.DownloadFile(req.InputLink, originalInputPath); err != nil {
+		return fmt.Errorf("failed to download input file: %v", err)
+	}
+
+	// Step 2: Execute the TTT script
+	log.Printf("Job ID %s: Executing TTT script for %s using model %s", job.ID, req.InputFileName, req.Model)
+	modelPath, err := req.GetModelPath()
+	if err != nil {
+		return fmt.Errorf("failed to get model path: %v", err)
+	}
+
+	if err := command.RunTTT(python.Py3, modelPath, req.InputFileName, req.OutputFileName, req.SourceLang, req.TargetLang); err != nil {
+		return fmt.Errorf("failed to execute TTT script: %v", err)
+	}
+
+	// Verify output file exists
+	if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
+		return fmt.Errorf("TTT script did not generate output file at %s", outputFilePath)
+	} else if err != nil {
+		return fmt.Errorf("error checking output file: %v", err)
+	}
+	log.Printf("Job ID %s: Successfully verified output file exists at %s", job.ID, outputFilePath)
+
+	// Step 3: Rename the output file if necessary
+	originalOutputPath := filepath.Join(outputDir, req.OutputFileName)
+	log.Printf("Job ID %s: Renaming output file from %s to %s", job.ID, outputFilePath, originalOutputPath)
+	if err := os.Rename(outputFilePath, originalOutputPath); err != nil {
+		return fmt.Errorf("failed to rename output file: %v", err)
+	}
+
+	// Step 4: Upload the output file
+	log.Printf("Job ID %s: Uploading output file from %s to %s", job.ID, originalOutputPath, req.OutputLink)
+	if err := utils.UploadFile(originalOutputPath, req.OutputLink); err != nil {
+		return fmt.Errorf("failed to upload output file: %v", err)
+	}
+
+	// Optionally, set the Result field
+	job.Result = "TTT processing completed successfully."
+
+	return nil
+}
+
+// processTTS processes a Text-to-Speech (TTS) job.
+func (p *Processor) processTTS(job *model.Job, req *model.TTSRequest) error {
+	// Define directories
+	inputDir := filepath.Join("data", "input", "tts")
+	outputDir := filepath.Join("data", "output", "tts")
+
+	// Log directories
+	log.Printf("Job ID %s: Using directories:\n- Input: %s\n- Output: %s", job.ID, inputDir, outputDir)
+
+	// Ensure directories exist
+	if err := os.MkdirAll(inputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create input directory: %v", err)
+	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Define full paths
+	originalInputTextPath := filepath.Join(inputDir, req.InputFileName)
+	originalInputAudioPath := filepath.Join(inputDir, req.InputAudioFileName)
+
+	// Create WAV version of input audio
+	wavFileName := strings.TrimSuffix(req.InputAudioFileName, filepath.Ext(req.InputAudioFileName)) + ".wav"
+	convertedInputAudioPath := filepath.Join(inputDir, wavFileName)
+	outputFilePath := filepath.Join(outputDir, req.OutputFileName)
+
+	// Check if input file is already WAV format
+	inputExt := strings.ToLower(filepath.Ext(req.InputAudioFileName))
+	isAlreadyWav := inputExt == ".wav"
+
+	// Log file paths
+	log.Printf("Job ID %s: Using file paths:\n- Input Text: %s\n- Input Audio: %s\n- Converted Audio: %s\n- Output: %s\n- Is already WAV: %v",
+		job.ID, originalInputTextPath, originalInputAudioPath, convertedInputAudioPath, outputFilePath, isAlreadyWav)
+
+	// Step 1: Download the input files
+	log.Printf("Job ID %s: Downloading input text file from %s to %s", job.ID, req.InputLink, originalInputTextPath)
+	if err := utils.DownloadFile(req.InputLink, originalInputTextPath); err != nil {
+		return fmt.Errorf("failed to download input text file: %v", err)
+	}
+
+	log.Printf("Job ID %s: Downloading input audio file from %s to %s", job.ID, req.InputAudioLink, originalInputAudioPath)
+	if err := utils.DownloadFile(req.InputAudioLink, originalInputAudioPath); err != nil {
+		return fmt.Errorf("failed to download input audio file: %v", err)
+	}
+
+	// Verify input files exist and are readable
+	if _, err := os.Stat(originalInputTextPath); err != nil {
+		return fmt.Errorf("input text file not accessible: %v", err)
+	}
+	if _, err := os.Stat(originalInputAudioPath); err != nil {
+		return fmt.Errorf("input audio file not accessible: %v", err)
+	}
+
+	// Convert audio to WAV format if needed
+	if isAlreadyWav {
+		log.Printf("Job ID %s: Input file is already WAV format, copying to converted path: %s -> %s", job.ID, originalInputAudioPath, convertedInputAudioPath)
+		// Copy the file to the converted path to maintain consistency
+		if err := utils.CopyFile(originalInputAudioPath, convertedInputAudioPath); err != nil {
+			return fmt.Errorf("failed to copy WAV file: %v", err)
+		}
+	} else {
+		log.Printf("Job ID %s: Converting audio file to WAV format: %s -> %s", job.ID, originalInputAudioPath, convertedInputAudioPath)
+		cmd := exec.Command("ffmpeg", "-y", "-i", originalInputAudioPath, "-acodec", "pcm_s16le", "-ar", "16000", convertedInputAudioPath)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			return fmt.Errorf("failed to convert audio to WAV: %v, output: %s", err, string(output))
+		}
+	}
+
+	// Verify converted audio file exists
+	if _, err := os.Stat(convertedInputAudioPath); err != nil {
+		return fmt.Errorf("converted audio file not accessible: %v", err)
+	}
+
+	// Step 2: Execute the TTS script
+	log.Printf("Job ID %s: Executing TTS script for %s and %s using model %s and language %s",
+		job.ID, req.InputFileName, wavFileName, req.Model, req.Lang)
+	modelPath, err := req.GetModelPath()
+	if err != nil {
+		return fmt.Errorf("failed to get model path: %v", err)
+	}
+
+	log.Printf("Job ID %s: Using model path: %s", job.ID, modelPath)
+
+	if err := command.RunTTS(python.Py3, modelPath, req.InputFileName, wavFileName, req.Lang, req.OutputFileName); err != nil {
+		return fmt.Errorf("failed to execute TTS script: %v", err)
+	}
+
+	// Step 3: Verify output file exists
+	if _, err := os.Stat(outputFilePath); os.IsNotExist(err) {
+		return fmt.Errorf("TTS script did not generate output file at %s", outputFilePath)
+	} else if err != nil {
+		return fmt.Errorf("error checking output file: %v", err)
+	}
+	log.Printf("Job ID %s: Successfully verified output file exists at %s", job.ID, outputFilePath)
+
+	// Step 4: Upload the output file
+	log.Printf("Job ID %s: Uploading output file from %s to %s", job.ID, outputFilePath, req.OutputLink)
+	if err := utils.UploadFile(outputFilePath, req.OutputLink); err != nil {
+		return fmt.Errorf("failed to upload output file: %v", err)
+	}
+
+	// Clean up converted audio file (only if it's different from the original)
+	if convertedInputAudioPath != originalInputAudioPath {
+		if err := os.Remove(convertedInputAudioPath); err != nil {
+			log.Printf("Job ID %s: Warning - Failed to clean up converted audio file: %v", job.ID, err)
+		}
+	}
+
+	// Optionally, set the Result field
+	job.Result = "TTS processing completed successfully."
+
+	return nil
+}
+
+// processSTT processes a Speech-to-Text (STT) job.
+func (p *Processor) processSTT(job *model.Job, req *model.STTRequest) error {
+	// Define directories
+	inputDir := filepath.Join("data", "input", "stt")
+	outputDir := filepath.Join("data", "output", "stt")
+
+	// Ensure directories exist
+	if err := os.MkdirAll(inputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create input directory: %v", err)
+	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Define full paths
+	originalInputPath := filepath.Join(inputDir, req.InputFileName)
+	outputFilePath := filepath.Join(outputDir, req.OutputFileName)
+
+	// Step 1: Download the input file
+	log.Printf("Job ID %s: Downloading input file from %s to %s", job.ID, req.InputLink, originalInputPath)
+	if err := utils.DownloadFile(req.InputLink, originalInputPath); err != nil {
+		return fmt.Errorf("failed to download input file: %v", err)
+	}
+
+	// Step 2: Execute the STT script
+	log.Printf("Job ID %s: Executing STT script for %s using model %s", job.ID, req.InputFileName, req.Model)
+	modelPath, err := req.GetModelPath()
+	if err != nil {
+		return fmt.Errorf("failed to get model path: %v", err)
+	}
+
+	if err := command.RunSTT(python.Py3, modelPath, req.InputFileName, req.OutputFileName); err != nil {
+		return fmt.Errorf("failed to execute STT script: %v", err)
+	}
+
+	// Step 3: Rename the output file if necessary
+	originalOutputPath := filepath.Join(outputDir, req.OutputFileName)
+	log.Printf("Job ID %s: Renaming output file from %s to %s", job.ID, outputFilePath, originalOutputPath)
+	if err := os.Rename(outputFilePath, originalOutputPath); err != nil {
+		return fmt.Errorf("failed to rename output file: %v", err)
+	}
+
+	// Step 4: Upload the output file
+	log.Printf("Job ID %s: Uploading output file from %s to %s", job.ID, originalOutputPath, req.OutputLink)
+	if err := utils.UploadFile(originalOutputPath, req.OutputLink); err != nil {
+		return fmt.Errorf("failed to upload output file: %v", err)
+	}
+
+	// Optionally, set the Result field
+	job.Result = "STT processing completed successfully."
+
+	return nil
+}
+
+func (p *Processor) processLS(job *model.Job, req *model.LSRequest) error {
+	// Define directories
+	inputDir := filepath.Join("data", "input", "ls")
+	outputDir := filepath.Join("data", "output", "ls")
+
+	// Ensure directories exist
+	if err := os.MkdirAll(inputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create input directory: %v", err)
+	}
+	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Define full paths
+	originalVideoInputPath := filepath.Join(inputDir, req.InputVideoFileName)
+	originalAudioInputPath := filepath.Join(inputDir, req.InputAudioFileName)
+	outputFilePath := filepath.Join(outputDir, req.OutputVideoFileName)
+
+	// Step 1: Download the input files
+	log.Printf("Job ID %s: Downloading video file from %s to %s", job.ID, req.InputVideoLink, originalVideoInputPath)
+	if err := utils.DownloadFile(req.InputVideoLink, originalVideoInputPath); err != nil {
+		return fmt.Errorf("failed to download video input file: %v", err)
+	}
+
+	log.Printf("Job ID %s: Downloading audio file from %s to %s", job.ID, req.InputAudioLink, originalAudioInputPath)
+	if err := utils.DownloadFile(req.InputAudioLink, originalAudioInputPath); err != nil {
+		return fmt.Errorf("failed to download audio input file: %v", err)
+	}
+
+	// Step 2: Execute the LS script
+	log.Printf("Job ID %s: Executing LS script for %s and %s", job.ID, req.InputVideoFileName, req.InputAudioFileName)
+	modelPath, err := req.GetModelPath()
+	if err != nil {
+		return fmt.Errorf("failed to get model path: %v", err)
+	}
+	if err := command.RunLS(python.Py3, modelPath, req.InputVideoFileName, req.InputAudioFileName, req.OutputVideoFileName); err != nil {
+		return fmt.Errorf("failed to execute LS script: %v", err)
+	}
+
+	// Step 3: Rename the output file if necessary (depending on how the script outputs)
+	originalOutputPath := filepath.Join(outputDir, req.OutputVideoFileName)
+	if originalOutputPath != outputFilePath {
+		log.Printf("Job ID %s: Renaming output file from %s to %s", job.ID, outputFilePath, originalOutputPath)
+		if err := os.Rename(outputFilePath, originalOutputPath); err != nil {
+			return fmt.Errorf("failed to rename output file: %v", err)
+		}
+	}
+
+	// Step 4: Upload the output file
+	log.Printf("Job ID %s: Uploading output file from %s to %s", job.ID, originalOutputPath, req.OutputVideoLink)
+	if err := utils.UploadFile(originalOutputPath, req.OutputVideoLink); err != nil {
+		return fmt.Errorf("failed to upload output file: %v", err)
+	}
+
+	// Optionally, set the Result field
+	job.Result = "LS processing completed successfully."
+
+	return nil
+}
