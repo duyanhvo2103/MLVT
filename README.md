@@ -1,11 +1,34 @@
 # English – Vietnamese Video Translation System using Machine Learning
 
-![Poster](./images/Poster.png)
+<h2 align="center">Poster</h2>
+<p align="center">
+  <img src="./images/Poster.png" width="700">
+</p>
 
-[![Watch video](https://img.youtube.com/vi/jTzVYh_J9I4/0.jpg)](https://www.youtube.com/watch?v=jTzVYh_J9I4)
+<h2 align="center">Demo</h2>
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=jTzVYh_J9I4">
+    <img src="https://img.youtube.com/vi/jTzVYh_J9I4/maxresdefault.jpg" width="600">
+  </a>
+</p>
 
-[![Watch video](https://img.youtube.com/vi/dy5tgLu1FEo/1.jpg)](https://www.youtube.com/watch?v=dy5tgLu1FEo)
-[![Watch video](https://img.youtube.com/vi/WmPpc6lNOSc/1.jpg)](https://www.youtube.com/watch?v=WmPpc6lNOSc)
+<h2 align="center">Result</h2>
+<p align="center">
+  <span style="display:inline-block; width:49%; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=dy5tgLu1FEo">
+      <img src="https://img.youtube.com/vi/dy5tgLu1FEo/0.jpg" width="100%">
+    </a>
+    <br>
+    <b>Vietnamese → English Translation</b>
+  </span>
+  <span style="display:inline-block; width:49%; text-align:center;">
+    <a href="https://www.youtube.com/watch?v=WmPpc6lNOSc">
+      <img src="https://img.youtube.com/vi/WmPpc6lNOSc/0.jpg" width="100%">
+    </a>
+    <br>
+    <b>English → Vietnamese Translation</b>
+  </span>
+</p>
 
 ## 1. Overview
 
