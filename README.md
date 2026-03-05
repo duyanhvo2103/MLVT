@@ -14,14 +14,14 @@
 
 <h2 align="center">Result</h2>
 <p align="center">
-  <span style="display:inline-block; width:49%; text-align:center;">
+  <span style="display:inline-block; width:40%; text-align:center;">
     <a href="https://www.youtube.com/watch?v=dy5tgLu1FEo">
       <img src="https://img.youtube.com/vi/dy5tgLu1FEo/0.jpg" width="100%">
     </a>
     <br>
     <b>Vietnamese → English Translation</b>
   </span>
-  <span style="display:inline-block; width:49%; text-align:center;">
+  <span style="display:inline-block; width:40%; text-align:center;">
     <a href="https://www.youtube.com/watch?v=WmPpc6lNOSc">
       <img src="https://img.youtube.com/vi/WmPpc6lNOSc/0.jpg" width="100%">
     </a>
